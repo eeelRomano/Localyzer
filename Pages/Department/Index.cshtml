@@ -1,0 +1,32 @@
+﻿@page
+@model Localyzer.Pages.Department.IndexModel
+@{
+}
+
+<br>
+<h2>Lista członków jednostki</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Imię</th>
+            <th>Nazwisko</th>
+            <th>Email</th>
+            <th>Numer Telefonu</th>
+            <th>Adres</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var user in Model.userlist)
+        {
+            <tr>
+                <td>@user.Id</td>
+                <td>@user.name</td>
+                <td>@user.lastname</td>
+                <td>@user.email</td>
+                <td>@user.phone</td>
+                <td>@user.address</td>
+            </tr>
+        }
+    </tbody>
+</table>
