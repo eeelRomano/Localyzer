@@ -31,7 +31,7 @@ namespace Localyzer.Pages
         private IActionResult DBlogin(string login, string password) 
         {
             String userid = dbHandler.Login(login, password);
-            if (userid == null || userid == "0")
+            if (userid == null || userid == "0" || userid=="" || userid==" ")
             {
                 ViewData["Error"] = "Nieprawid³owy login lub has³o.";
                 return Page();
