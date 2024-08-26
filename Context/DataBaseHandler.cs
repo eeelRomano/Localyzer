@@ -1,5 +1,6 @@
 ﻿using Localyzer.Models;
 using Localyzer.Models.Interfaces;
+using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Serilog;
 using System.Data.SqlClient;
@@ -17,9 +18,10 @@ namespace Localyzer.Context
         public List<UserInfo> userlist = [];
         public List<DeviceLocation> deviceslist = [];
 
-        private String connectionString = "Data Source=APOLLO-11\\U18372;Initial Catalog=LocalyzerDB;Integrated Security=True;";// Trust Server Certificate=True;";
+        //private String connectionString = "Data Source=APOLLO-11\\U18372;Initial Catalog=LocalyzerDB;Integrated Security=True;";// Trust Server Certificate=True;";
+        private String connectionString = "Server = tcp:localyzerdb.database.windows.net,1433;Initial Catalog = LocalyzerDB; Persist Security Info=False;User ID = elromano; Password=K@cper07; MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout = 30;";
 
-        private readonly ILoggedDevice _logged;
+    private readonly ILoggedDevice _logged;
         #endregion
 
         public DataBaseHandler(ILoggedDevice logged)
