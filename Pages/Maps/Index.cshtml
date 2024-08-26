@@ -1,0 +1,245 @@
+﻿@page
+@model Localyzer.Pages.Maps.IndexModel
+@{
+    ViewData["Title"] = "Mapy";
+}
+
+<h2>Pozycja aktywnych urządzeń</h2>
+
+<!-- API: AIzaSyBRzw6mRa6lJbaT-FfbA7ziksoVog4porQ-->
+
+<!-- Container for the map -->
+<div id="map" style="height: 600px; width: 100%;"></div>
+
+@section Scripts {
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBRzw6mRa6lJbaT-FfbA7ziksoVog4porQ&callback=initMap" async defer></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script type="text/javascript">
+        var map;
+        var markers = {}; // Store markers by deviceId
+        var logged = "";
+        var userId = '@TempData["UserId"]';
+
+        function initMap() {
+            var initialPosition = { lat: 39.8283, lng: -98.5795 }; // Center of the USA
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 4,
+                center: initialPosition
+            });
+
+            // Start polling to update locations
+            setInterval(fetchDeviceLocations, 1000); // Poll every 1 second
+        }
+
+        function fetchDeviceLocations() {
+            getLocationAndSend();
+            $.ajax({
+                url: '/api/Map', // The API endpoint
+                method: 'GET',
+                success: function (data) {
+                    console.log("Data received:", data); // Debugging: Log the data received
+                    
+                    if (Array.isArray(data) && data.length > 0) {
+                        // Track active device IDs to handle removals
+                        var activeDeviceIds = [];
+
+                        // Update or create markers for each device
+                        data.forEach(function (device) {
+                            var position = {
+                                lat: parseFloat(device.latitude),
+                                lng: parseFloat(device.longitude)
+                            };
+
+                            activeDeviceIds.push(device.deviceId);
+                            console.log("Processing deviceId:", device.deviceId);
+
+                            logged = device.loggedID;
+                            //Zalogowane urządzenie
+                            if (device.deviceId == logged) {
+                                    document.getElementById('devicename').innerText = device.deviceId;
+                                    document.getElementById('latitude').innerText = position.lat;
+                                    document.getElementById('longitude').innerText = position.lng;
+                                }
+
+                            // Update or create marker
+                            updateDeviceLocation(device.deviceId, position);
+                        });
+
+                        // Remove markers for devices no longer active
+                        removeInactiveMarkers(activeDeviceIds);
+                    } else {
+                        console.log("No device data available.");
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error('Failed to fetch device locations:', status, error);
+                }
+            });
+        }
+
+        function createCustomMarker(map, position, labelText, deviceId) {
+            // Define the custom marker class extending OverlayView
+            class CustomMarker extends google.maps.OverlayView {
+                constructor(position, map, labelText) {
+                    super();
+                    this.position = position;
+                    this.map = map;
+                    this.labelText = labelText;
+                    this.div = null;
+
+                    this.setMap(map);
+                }
+
+                // Create the div and attach it to the map
+                onAdd() {
+                    this.div = document.createElement('div');
+                    this.div.style.position = 'absolute';
+                    this.div.style.transform = 'translate(-50%, -100%)';
+                    this.div.style.backgroundColor = 'white';
+                    this.div.style.padding = '5px';
+                    this.div.style.borderRadius = '3px';
+                    this.div.style.border = '1px solid black';
+                    this.div.style.whiteSpace = 'nowrap';
+                    this.div.innerHTML = this.labelText;
+                    this.getPanes().floatPane.appendChild(this.div);
+                }
+
+                // Position the div on the map
+                draw() {
+                    const point = this.getProjection().fromLatLngToDivPixel(this.position);
+                    if (point) {
+                        this.div.style.left = `${point.x}px`;
+                        this.div.style.top = `${point.y+30}px`;
+                    }
+                }
+
+                // Remove the div from the map
+                onRemove() {
+                    if (this.div) {
+                        this.div.parentNode.removeChild(this.div);
+                        this.div = null;
+                    }
+                }
+
+                // Update the position if needed
+                updatePosition(newPosition) {
+                    this.position = newPosition;
+                    this.draw();
+                }
+            }
+
+            // Create the marker
+            const marker = new google.maps.Marker({
+                position: position,
+                map: map,
+                title: deviceId,
+                icon: {
+                    //url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                    url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                    labelOrigin: new google.maps.Point(16, -10) // Offset for the label
+                }
+            });
+
+            // Create and return the custom label above the marker
+            const customLabel = new CustomMarker(position, map, labelText);
+
+            return { marker, customLabel };
+        }
+
+        // Usage inside your updateDeviceLocation function
+        function updateDeviceLocation(deviceId, position) {
+            console.log("Checking marker for deviceId:", deviceId);
+            console.log("Current markers:", markers);
+
+            if (markers[deviceId]) {
+                // Update the existing marker's position if it has changed
+                var currentPos = markers[deviceId].marker.getPosition();
+
+                var currentLat = parseFloat(currentPos.lat().toFixed(6));
+                var currentLng = parseFloat(currentPos.lng().toFixed(6));
+                var newLat = parseFloat(position.lat.toFixed(6));
+                var newLng = parseFloat(position.lng.toFixed(6));
+
+                if (currentLat !== newLat || currentLng !== newLng) {
+                    markers[deviceId].marker.setPosition(position);
+                    markers[deviceId].customLabel.updatePosition(position);
+                    console.log("Updated position for device:", deviceId, " to new position: ", position);
+                } else {
+                    console.log("Position unchanged for device:", deviceId);
+                }
+            } else {
+                // Create a new marker and custom label for this device
+                console.log("Creating marker and custom label for device:", deviceId);
+                markers[deviceId] = createCustomMarker(map, position, deviceId, deviceId);
+                console.log("Marker and custom label created for device:", deviceId);
+            }
+        }
+
+        function removeInactiveMarkers(activeDeviceIds) {
+            // Remove markers for devices that are no longer in the active list
+            Object.keys(markers).forEach(function (deviceId) {
+                if (!activeDeviceIds.includes(deviceId)) {
+                    markers[deviceId].setMap(null); // Remove the marker from the map
+                    delete markers[deviceId]; // Remove the marker from the markers object
+                    console.log("Marker removed for inactive device:", deviceId);
+                }
+            });
+        }
+
+
+        function sendLocationToServer(position) {
+            var latitude = position.coords.latitude;
+            var longitude = position.coords.longitude;
+
+            $.ajax({
+                url: '/api/Map/update', // Endpoint to receive the location data
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    latitude: latitude,
+                    longitude: longitude,
+                    userId: userId // Include userId in the data sent to the server
+                }),
+                success: function (response) {
+                    console.log('Location sent successfully:', response);
+                },
+                error: function (xhr, status, error) {
+                    console.error('Error sending location:', status, error);
+                }
+            });
+        }
+
+        function getLocationAndSend() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(sendLocationToServer, function (error) {
+                    console.error('Error getting location:', error);
+                }, {
+                    enableHighAccuracy: true, // Request high accuracy location
+                    maximumAge: 0,           // Do not use a cached position
+                    timeout: 5000            // Timeout after 5 seconds
+                });
+            } else {
+                console.error('Geolocation is not supported by this browser.');
+            }
+        }
+    </script>
+}
+<p></p>
+<center>
+    <h3>Dane zalogowanego Urządzenia</h3>
+</center>
+<table title="Dane zalogowanego urządzenia" style="width: 100%;">
+        <tr>
+            <td colspan="2"><h2 id="devicename"></h2></td>
+        </tr>
+        <tr>
+            <td><h2>Długość Geograficzna:</h2></td>
+            <td><h2>Szerokość Geograficzna:</h2></td>
+        </tr>
+        <tr>
+            <td><h2 id="latitude"></h2></td>
+            <td><h2 id="longitude"></h2></td>
+        </tr>
+</table>
+    
+    

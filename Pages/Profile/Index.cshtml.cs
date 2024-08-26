@@ -1,13 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace Localyzer.Pages.Home
+namespace Localyzer.Pages.Profile
 {
-    public class HomeModel : PageModel
+    public class IndexModel : PageModel
     {
         public void OnGet()
         {
-
         }
     }
 }

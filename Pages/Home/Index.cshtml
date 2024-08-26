@@ -1,6 +1,39 @@
 ﻿@page
-@model Localyzer.Pages.Home.HomeModel
+@model Localyzer.Controllers.HomeController
 @{
+    TempData["UserId"] = "1";
 }
 
-<h1>Zalogowano Pomyślnie</h1>
+@section Scripts
+{
+    <script type="text/javascript">
+        function activate()
+        {
+            var btn_title = document.getElementById("btnactivate").innerText;
+            var active = "Aktywuj Śledzenie";
+            var deactive = "Wyłącz Śledzenie";
+
+            if (btn_title == active) {
+                document.getElementById("btnactivate").innerText = deactive;
+            }
+            else {
+                document.getElementById("btnactivate").innerText = active;
+            }
+        }
+    </script>
+}
+
+<h1 id="title">Menu Główne</h1>
+
+<p></p>
+
+<center>
+    <form action="ActivateLocating" method="post">
+        <input id="btnactivate" onclick="activate()" type="submit" value="Aktywuj Śledzenie" />
+     </form>
+
+     <h2>Status śledzenia:</h2>
+     <p></p>
+     <div>@TempData["status"]</div>
+
+</center>

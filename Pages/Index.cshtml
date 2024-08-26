@@ -2,6 +2,9 @@
 @model IndexModel
 @{
     ViewData["Title"] = "Autoryzacja";
+    object? errormsg = "";
+    @if (TempData["Error"] != null)
+        errormsg = TempData["Error"];
 }
 <link rel="stylesheet" href="~/css/site.css"/>
 <h1>Logowanie</h1>
@@ -24,6 +27,9 @@
             </table>
         </center>
     </form>
-    <p>Nie masz konta? <a href="/Register/Register">Zarejestruj się już dziś</a>.</p>
-    <p></p>
+    <p>Nie masz konta? <a href="/Register/Index">Zarejestruj się już dziś</a>.</p>
+    @if (!string.IsNullOrEmpty(errormsg?.ToString()))
+    {
+            <p id="errormsg">@errormsg</p>
+    }
 </div>
